@@ -133,13 +133,14 @@ void addcourse(struct Course** chead) {
   
   if (*chead == NULL) {
     *chead = new;
-  } else if (strcmp(new->depid, (*chead)->depid) <= 0 &&
-             new->cid < (*chead)->cid) {
+  } else if (strcmp(new->depid, (*chead)->depid) < 0 ||
+             (!(strcmp(new->depid, (*chead)->depid)) &&
+               new->cid < (*chead)->cid)) {
     new->next = *chead;
     *chead = new;
   } else {
     cur = *chead;
-    while (cur->next && strcmp(cur->next->depid, new->depid) <= 0) {
+    while (cur->next && strcmp(cur->next->depid, new->depid) < 0) {
       cur = cur->next;
     }
     if (!cur->next) cur->next = new;
