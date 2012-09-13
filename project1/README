@@ -1,0 +1,6 @@
+Project 1
+=========
+This project is an implementation of a basic SIS database.
+
+The program reads in a database of student and course files and allows for the
+addition/removal of students and courses.
