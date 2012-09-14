@@ -6,16 +6,18 @@
 #define FALSE 0
 
 struct Course;
+struct Enrollment;
 
 // Representation of a Student node in a linked list.
 // Contains student ID, student name, a student's course list, and a pointer to
 // the next Student in the linked list.
 struct Student {
   int sid;
+  int numcourses;
   char* first;
   char* middle;
   char* last;
-  struct Course* clist;
+  struct Enrollment* clist;
   struct Student* next;
 };
 
@@ -25,9 +27,17 @@ struct Student {
 struct Course {
   char depid[2];
   int cid;
+  int numenrolled;
   int size;
-  struct Student* slist;
+  struct Enrollment* slist;
   struct Course* next;
+};
+
+struct Enrollment {
+  struct Student* student;
+  struct Course* course;
+  struct Enrollment* nextstudent;
+  struct Enrollment* nextcourse;
 };
 
 // Copies a string from one buffer to another.
@@ -39,25 +49,28 @@ struct Student* initstudent();
 // Initializes a course.
 struct Course* initcourse();
 
+// Initializes an enrollment.
+struct Enrollment* initenrollment();
+
 // Adds a student to the database.
-void addstu(struct Student** shead);
+void addstudent(struct Student** shead);
 
 void addcourse(struct Course** chead);
 
-// Checks if a student ID already exists.
-// Returns 1 if it exists, 0 otherwise.
-int checksid(int sid, struct Student** shead);
+void enrollstudent(struct Student** shead, struct Course** chead);
 
-// Checks if a course ID already exists.
-// Returns 1 if it exists, 0 otherwise.
-int checkcid(char depid[2], int cid, struct Course** chead);
+struct Student* getstudent(int sid, struct Student** shead);
+
+struct Course* getcourse(char depid[2], int cid, struct Course** chead);
+
+int hasstudent(struct Course** course, int sid);
 
 // Prints a student's information to the console.
-void printstu(struct Student** student);
+void printstudent(struct Student** student);
 
 void printcourse(struct Course** course);
 
-void stulist(struct Student** shead);
+void studentlist(struct Student** shead);
 
 void courselist(struct Course** chead);
 #endif
