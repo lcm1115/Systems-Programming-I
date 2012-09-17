@@ -19,10 +19,12 @@ int main(int argc, char** argv) {
   if (argc == 4) {
     verbose = TRUE;
   }
+  readfiles(&shead, &chead, &argv[argc - 2], &argv[argc - 1], input);
   printf("sis> ");
   fflush(stdout);
   while ((nread = read(STDIN_FILENO, input, MAX_BUFFER_LENGTH))) {
     input[nread - 1] = '\0';
+    printf("input: %s\n", input);
     temp = strtok(input, " ");
     if (!strcmp(temp, "student")) {
       addstudent(&shead);
@@ -38,7 +40,6 @@ int main(int argc, char** argv) {
   }
   printf("\nStudent List:\n");
   fflush(stdout);
-  //studentlist(&shead);
   return 0;
 }
 
@@ -143,7 +144,7 @@ void addcourse(struct Course** chead) {
   new->depid[1] = tempid[1];
   new->cid = cid;
   new->size = atof(strtok(NULL, " "));
-  
+
   if (*chead == NULL) {
     *chead = new;
   } else if (strcmp(new->depid, (*chead)->depid) < 0 ||
@@ -171,7 +172,7 @@ void addcourse(struct Course** chead) {
 
   if (verbose) printf("%s%03d opened with limit %d\n",
                        new->depid,
-                       new->cid, 
+                       new->cid,
                        new->size);
 }
 
@@ -215,8 +216,58 @@ void enrollstudent(struct Student** shead, struct Course** chead) {
     struct Enrollment* enrollment = initenrollment();
     enrollment->student = student;
     enrollment->course = course;
+    // Add course to student schedule
+    if (student->clist == NULL) {
+      student->clist = enrollment;
+    } else if (strcmp(enrollment->course->depid, student->clist->course->depid) < 0 ||
+               (!(strcmp(enrollment->course->depid, student->clist->course->depid)) &&
+                 enrollment->course->cid < student->clist->course->cid)) {
+      enrollment->nextcourse = student->clist;
+      student->clist = enrollment;
+    } else {
+      struct Enrollment* cur = student->clist;
+      while (cur->nextcourse &&
+        strcmp(cur->nextcourse->course->depid, enrollment->course->depid) < 0) {
+        cur = cur->nextcourse;
+      }
+      if (!cur->nextcourse) cur->nextcourse = enrollment;
+      else {
+        while (cur->nextcourse &&
+          !strcmp(enrollment->course->depid, cur->nextcourse->course->depid) &&
+          cur->nextcourse->course->cid < enrollment->course->cid) {
+          cur = cur->nextcourse;
+        }
+        if (cur->nextcourse) {
+          enrollment->nextcourse = cur->nextcourse;
+        }
+        cur->nextcourse = enrollment;
+      }
+    }
+    // Add student to course list
+    if (course->slist == NULL) {
+      course->slist = enrollment;
+    } else if (enrollment->student->sid < course->slist->student->sid) {
+      enrollment->nextstudent = course->slist;
+      course->slist = enrollment;
+    } else {
+      struct Enrollment* cur = course->slist;
+      while (cur->nextstudent &&
+        cur->nextstudent->student->sid < enrollment->student->sid) {
+        cur = cur->nextstudent;
+      }
+      if (cur->nextstudent) {
+        enrollment->nextstudent = cur->nextstudent;
+      }
+      cur->nextstudent = enrollment;
+    }
     student->numcourses++;
     course->numenrolled++;
+    if (verbose) {
+      printf("%05d added to %s%d\n",
+             enrollment->student->sid,
+             enrollment->course->depid,
+             enrollment->course->cid);
+    }
   }
 }
 
@@ -273,4 +324,27 @@ void courselist(struct Course** chead) {
     printcourse(&cur);
     cur = cur->next;
   }
+}
+
+void readfiles(struct Student** shead,
+               struct Course** chead,
+               char** coursefile,
+               char** studentfile,
+               char inputbuffer[]) {
+  FILE* fp = fopen(*coursefile, "r");
+
+  while (fgets(inputbuffer, MAX_BUFFER_LENGTH, fp) != NULL) {
+    strtok(inputbuffer, " ");
+    addcourse(chead);
+  }
+
+  fclose(fp);
+  fopen(*studentfile, "r");
+
+  while (fgets(inputbuffer, MAX_BUFFER_LENGTH, fp) != NULL) {
+    strtok(inputbuffer, " ");
+    addstudent(shead);
+  }
+
+  fclose(fp);
 }

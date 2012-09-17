@@ -59,6 +59,10 @@ void addcourse(struct Course** chead);
 
 void enrollstudent(struct Student** shead, struct Course** chead);
 
+void dropstudent(struct Student** shead, struct Course** chead);
+
+void removecourse(struct Course** chead);
+
 struct Student* getstudent(int sid, struct Student** shead);
 
 struct Course* getcourse(char depid[2], int cid, struct Course** chead);
@@ -70,7 +74,11 @@ void printstudent(struct Student** student);
 
 void printcourse(struct Course** course);
 
-void studentlist(struct Student** shead);
-
 void courselist(struct Course** chead);
+
+void readfiles(struct Student** shead,
+               struct Course** chead,
+               char** coursefile,
+               char** studentfile,
+               char inputbuffer[]);
 #endif
