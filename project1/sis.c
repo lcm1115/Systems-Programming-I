@@ -30,12 +30,41 @@ int main(int argc, char** argv) {
     } else if (!strcmp(temp, "add")) {
       enrollstudent(&shead, &chead);
     } else if (!strcmp(temp, "drop")) {
-      dropstudent(&shead, &chead);
+      int sid = atof(strtok(NULL, " "));
+      char* temp = strtok(NULL, " ");
+      char tempid[2];
+      int cid;
+
+      tempid[0] = temp[0];
+      tempid[1] = temp[1];
+      temp += 2;
+      cid = atof(temp);
+
+      dropstudent(&shead, &chead, sid, tempid, cid);
     } else if (!strcmp(temp, "remove")) {
+      removecourse(&shead, &chead);
     }
   }
-  printf("\nStudent List:\n");
-  fflush(stdout);
+  struct Student* curstu = shead;
+  struct Course* curcourse = chead;
+  struct Enrollment* cur;
+  while (curstu) {
+    printf("\n");
+    printf("Student ");
+    printstudent(&curstu);
+    printf(" is taking %d courses:\n  ", curstu->numcourses);
+    cur = curstu->clist;
+    while (cur) {
+      printf(" %s%03d", cur->course->depid, cur->course->cid);
+      cur = cur->nextcourse;
+    }
+    curstu = curstu->next;
+    printf("\n");
+  }
+  while (curcourse) {
+    printf("\n");
+    printf("Course ");
+  }
   return 0;
 }
 
@@ -114,8 +143,9 @@ void addstudent(struct Student** shead) {
   }
 
   if (verbose) {
-    printf("new ");
+    printf("new student ");
     printstudent(&new);
+    printf("\n");
   }
 }
 
@@ -176,7 +206,6 @@ void enrollstudent(struct Student** shead, struct Course** chead) {
   int sid = atof(strtok(NULL, " "));
   struct Student* student = getstudent(sid, shead);
   struct Course* course;
-  struct Enrollment* enrollment;
   char* temp = strtok(NULL, " ");
   char tempid[2];
   int cid;
@@ -270,21 +299,14 @@ void enrollstudent(struct Student** shead, struct Course** chead) {
   }
 }
 
-void dropstudent(struct Student** shead, struct Course** chead) {
-  int sid = atof(strtok(NULL, " "));
+void dropstudent(struct Student** shead,
+                 struct Course** chead,
+                 int sid,
+                 char depid[2],
+                 int cid) {
   struct Student* student = getstudent(sid, shead);
-  struct Course* course;
+  struct Course* course = getcourse(depid, cid, chead);
   struct Enrollment* enrollment;
-  char* temp = strtok(NULL, " ");
-  char tempid[2];
-  int cid;
-
-  tempid[0] = temp[0];
-  tempid[1] = temp[1];
-  temp += 2;
-  cid = atof(temp);
-
-  course = getcourse(tempid, cid, chead);
 
   if (!student) {
     char error[20];
@@ -292,7 +314,7 @@ void dropstudent(struct Student** shead, struct Course** chead) {
     perror(error);
   } else if (!course) {
     char error[20];
-    sprintf(error, "%s%03d does not exist", tempid, cid);
+    sprintf(error, "%s%03d does not exist", depid, cid);
     perror(error);
   } else if (!hasstudent(&course, sid)) {
     char error[31];
@@ -335,6 +357,38 @@ void dropstudent(struct Student** shead, struct Course** chead) {
   }
 }
 
+void removecourse(struct Student** shead, struct Course** chead) {
+  struct Course* course;
+  struct Enrollment* enrollment;
+  char* temp = strtok(NULL, " ");
+  char tempid[2];
+  int cid;
+
+  tempid[0] = temp[0];
+  tempid[1] = temp[1];
+  temp += 2;
+  cid = atof(temp);
+
+  course = getcourse(tempid, cid, chead);
+
+  enrollment = course->slist;
+  int v = verbose;
+  verbose = 0;
+  while (enrollment != NULL && enrollment->student != NULL) {
+    dropstudent(shead,
+                chead,
+                enrollment->student->sid,
+                course->depid,
+                course->cid);
+    enrollment = enrollment->nextstudent;
+  }
+  verbose = v;
+  if (verbose) {
+    printf("%s%03d closed\n", course->depid, course->cid);
+  }
+  unallocate(course);
+}
+
 struct Student* getstudent(int sid, struct Student** shead) {
   struct Student* cur = *shead;
   while (cur && cur->sid != sid) {
@@ -367,7 +421,7 @@ void printstudent(struct Student** student) {
   printf("%05d (%s", (*student)->sid, (*student)->last);
   if ((*student)->first != 0) printf(" %s", (*student)->first);
   if ((*student)->middle != 0) printf(" %s", (*student)->middle);
-  printf(")\n");
+  printf(")");
 }
 
 void printcourse(struct Course** course) {

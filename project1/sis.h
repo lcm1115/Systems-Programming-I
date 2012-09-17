@@ -59,9 +59,13 @@ void addcourse(struct Course** chead);
 
 void enrollstudent(struct Student** shead, struct Course** chead);
 
-void dropstudent(struct Student** shead, struct Course** chead);
+void dropstudent(struct Student** shead,
+                 struct Course** chead,
+                 int sid,
+                 char depid[2],
+                 int cid);
 
-void removecourse(struct Course** chead);
+void removecourse(struct Student** shead, struct Course** chead);
 
 struct Student* getstudent(int sid, struct Student** shead);
 
