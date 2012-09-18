@@ -25,10 +25,10 @@ struct Student {
 // Contains department ID, course ID, size, a course's student list, and a
 // pointer to the next Course in the linked list.
 struct Course {
-  char depid[2];
-  int cid;
-  int numenrolled;
-  int size;
+  char depid[3];
+  short cid;
+  short numenrolled;
+  short size;
   struct Enrollment* slist;
   struct Course* next;
 };
@@ -78,8 +78,6 @@ void printstudent(struct Student** student);
 
 void printcourse(struct Course** course);
 
-void courselist(struct Course** chead);
-
 void readfiles(struct Student** shead,
                struct Course** chead,
                char** coursefile,
@@ -87,4 +85,6 @@ void readfiles(struct Student** shead,
                char inputbuffer[]);
 
 int comparestudent(struct Student** stu1, struct Student** stu2);
+
+void clearmem(struct Student** shead, struct Course** chead);
 #endif

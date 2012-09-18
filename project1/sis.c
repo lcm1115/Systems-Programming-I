@@ -11,7 +11,6 @@ int main(int argc, char** argv) {
   struct Course* chead = 0;
   char* input = allocate(MAX_BUFFER_LENGTH);
   char* temp;
-  int nread;
   if (argc < 3 || argc > 4 || (argc == 4 && strcmp(argv[1], "-v"))) {
     fprintf(stderr, "usage: project1 [-v] course_file student_file\n");
     return 1;
@@ -32,14 +31,12 @@ int main(int argc, char** argv) {
     } else if (!strcmp(temp, "drop")) {
       int sid = atof(strtok(NULL, " \t"));
       char* temp = strtok(NULL, " \t");
-      char tempid[2];
+      char tempid[3];
       int cid;
 
       tempid[0] = temp[0];
       tempid[1] = temp[1];
-      if (strlen(tempid) >= 3) {
-        tempid[2] = 0;
-      }
+      tempid[2] = 0;
       temp += 2;
       cid = atof(temp);
 
@@ -88,6 +85,8 @@ int main(int argc, char** argv) {
     }
     curcourse = curcourse->next;
   }
+  clearmem(&shead, &chead);
+  unallocate(input);
   return 0;
 }
 
@@ -98,6 +97,7 @@ void strcopy(char** dest, char** src) {
 
 struct Student* initstudent() {
   struct Student* newstudent = allocate(sizeof(struct Student));
+  newstudent->numcourses = 0;
   newstudent->first = 0;
   newstudent->middle = 0;
   newstudent->last = 0;
@@ -108,8 +108,10 @@ struct Student* initstudent() {
 
 struct Course* initcourse() {
   struct Course* newcourse = allocate(sizeof(struct Course));
+  newcourse->numenrolled = 0;
   newcourse->depid[0] = 0;
   newcourse->depid[1] = 0;
+  newcourse->depid[2] = 0;
   newcourse->slist = 0;
   newcourse->next = 0;
   return newcourse;
@@ -178,14 +180,12 @@ void addcourse(struct Course** chead) {
   struct Course* new;
   struct Course* cur;
   char* temp;
-  char tempid[2];
+  char tempid[3];
   int cid;
   temp = strtok(NULL, " \t");
   tempid[0] = temp[0];
   tempid[1] = temp[1];
-  if (strlen(tempid) >= 3) {
-    tempid[2] = 0;
-  }
+  tempid[2] = 0;
   temp += 2;
   cid = atof(temp);
   if (getcourse(tempid, cid, chead)) {
@@ -236,32 +236,29 @@ void addcourse(struct Course** chead) {
 void enrollstudent(struct Student** shead, struct Course** chead) {
   int sid = atof(strtok(NULL, " \t"));
   struct Student* student = getstudent(sid, shead);
+  struct Enrollment* cur;
   struct Course* course;
   char* temp = strtok(NULL, " \t");
-  char tempid[2];
+  char tempid[3];
   int cid;
 
   tempid[0] = temp[0];
   tempid[1] = temp[1];
+  tempid[2] = 0;
   temp += 2;
   cid = atof(temp);
 
   course = getcourse(tempid, cid, chead);
 
   if (!student) {
-    char error[20];
     fprintf(stderr, "%05d does not exist\n", sid);
   } else if (!course) {
-    char error[20];
     fprintf(stderr, "%s%03d does not exist\n", tempid, cid);
   } else if (student->numcourses == 5) {
-    char error[25];
     fprintf(stderr, "%05d has a full schedule\n", sid);
   } else if (course->numenrolled == course->size) {
-    char error[13];
     fprintf(stderr, "%s%03d is full\n", tempid, cid);
   } else if (hasstudent(&course, sid)) {
-    char error[31];
     fprintf(stderr, "%05d already enrolled in %s%03d\n",
             sid,
             course->depid,
@@ -278,7 +275,7 @@ void enrollstudent(struct Student** shead, struct Course** chead) {
       enrollment->nextcourse = student->clist;
       student->clist = enrollment;
     } else {
-      struct Enrollment* cur = student->clist;
+      cur = student->clist;
       while (cur->nextcourse &&
         strcmp(cur->nextcourse->course->depid, enrollment->course->depid) < 0) {
         cur = cur->nextcourse;
@@ -302,7 +299,7 @@ void enrollstudent(struct Student** shead, struct Course** chead) {
       enrollment->nextstudent = course->slist;
       course->slist = enrollment;
     } else {
-      struct Enrollment* cur = course->slist;
+      cur = course->slist;
       while (cur->nextstudent &&
         comparestudent(&cur->nextstudent->student, &enrollment->student) < 0) {
         cur = cur->nextstudent;
@@ -330,15 +327,13 @@ void dropstudent(struct Student** shead,
                  int cid) {
   struct Student* student = getstudent(sid, shead);
   struct Course* course = getcourse(depid, cid, chead);
+  struct Enrollment* todelete;
 
   if (!student) {
-    char error[20];
     fprintf(stderr, "%05d does not exist\n", sid);
   } else if (!course) {
-    char error[20];
     fprintf(stderr, "%s%03d does not exist\n", depid, cid);
   } else if (!hasstudent(&course, sid)) {
-    char error[31];
     fprintf(stderr, "%05d not enrolled in %s%03d\n",
             sid,
             course->depid,
@@ -347,8 +342,7 @@ void dropstudent(struct Student** shead,
     struct Enrollment* cur = course->slist;
     if (!cur->nextstudent || cur->student->sid == student->sid) {
       course->slist = cur->nextstudent;
-    }
-    else {
+    } else {
       while (cur->nextstudent->student->sid != student->sid) {
         cur = cur->nextstudent;
       }
@@ -356,13 +350,14 @@ void dropstudent(struct Student** shead,
     }
     cur = student->clist;
     if (!cur->nextcourse || cur->course == course) {
+      todelete = student->clist;
       student->clist = cur->nextcourse;
-    }
-    else {
+    } else {
       while (cur->nextcourse->course->cid != course->cid ||
              strcmp(cur->nextcourse->course->depid, course->depid)) {
         cur = cur->nextcourse;
       }
+      todelete = cur->nextcourse;
       cur->nextcourse = cur->nextcourse->nextcourse;
     }
     student->numcourses--;
@@ -373,6 +368,7 @@ void dropstudent(struct Student** shead,
              course->depid,
              course->cid);
     }
+    unallocate(todelete);
   }
 }
 
@@ -380,11 +376,12 @@ void removecourse(struct Student** shead, struct Course** chead) {
   struct Course* course;
   struct Enrollment* enrollment;
   char* temp = strtok(NULL, " \t");
-  char tempid[2];
+  char tempid[3];
   int cid;
 
   tempid[0] = temp[0];
   tempid[1] = temp[1];
+  tempid[2] = 0;
   temp += 2;
   cid = atof(temp);
 
@@ -463,22 +460,6 @@ void printcourse(struct Course** course) {
   printf("%s%03d %d", (*course)->depid, (*course)->cid, (*course)->size);
 }
 
-void stulist(struct Student** shead) {
-  struct Student* cur = *shead;
-  while (cur) {
-    printstudent(&cur);
-    cur = cur->next;
-  }
-}
-
-void courselist(struct Course** chead) {
-  struct Course* cur = *chead;
-  while (cur) {
-    printcourse(&cur);
-    cur = cur->next;
-  }
-}
-
 void readfiles(struct Student** shead,
                struct Course** chead,
                char** coursefile,
@@ -523,5 +504,34 @@ int comparestudent(struct Student** stu1, struct Student** stu2) {
         return (*stu1)->sid - (*stu2)->sid;
       }
     }
+  }
+}
+
+void clearmem(struct Student** shead, struct Course** chead) {
+  struct Student* curs = *shead;
+  struct Student* prevs;
+  struct Enrollment* cure;
+  struct Enrollment* preve;
+  while (curs) {
+    prevs = curs;
+    curs = curs->next;
+    cure = prevs->clist;
+    while (cure) {
+      preve = cure;
+      cure = cure->nextcourse;
+      unallocate(preve);
+    }
+    unallocate(prevs->first);
+    unallocate(prevs->middle);
+    unallocate(prevs->last);
+    unallocate(prevs);
+  }
+
+  struct Course* curc = *chead;
+  struct Course* prevc;
+  while (curc) {
+    prevc = curc;
+    curc = curc->next;
+    unallocate(prevc);
   }
 }
