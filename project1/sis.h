@@ -85,4 +85,6 @@ void readfiles(struct Student** shead,
                char** coursefile,
                char** studentfile,
                char inputbuffer[]);
+
+int comparestudent(struct Student** stu1, struct Student** stu2);
 #endif

@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
   char* temp;
   int nread;
   if (argc < 3 || argc > 4 || (argc == 4 && strcmp(argv[1], "-v"))) {
-    perror("usage: project1 [-v] course_file student_file");
+    fprintf(stderr, "usage: project1 [-v] course_file student_file\n");
     return 1;
   }
   if (argc == 4) {
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
   readfiles(&shead, &chead, &argv[argc - 2], &argv[argc - 1], input);
   while (fgets(input, MAX_BUFFER_LENGTH, stdin)) {
     input[strlen(input) - 1] = 0;
-    temp = strtok(input, " ");
+    temp = strtok(input, " \t");
     if (!strcmp(temp, "student")) {
       addstudent(&shead);
     } else if (!strcmp(temp, "course")) {
@@ -30,13 +30,16 @@ int main(int argc, char** argv) {
     } else if (!strcmp(temp, "add")) {
       enrollstudent(&shead, &chead);
     } else if (!strcmp(temp, "drop")) {
-      int sid = atof(strtok(NULL, " "));
-      char* temp = strtok(NULL, " ");
+      int sid = atof(strtok(NULL, " \t"));
+      char* temp = strtok(NULL, " \t");
       char tempid[2];
       int cid;
 
       tempid[0] = temp[0];
       tempid[1] = temp[1];
+      if (strlen(tempid) >= 3) {
+        tempid[2] = 0;
+      }
       temp += 2;
       cid = atof(temp);
 
@@ -52,18 +55,38 @@ int main(int argc, char** argv) {
     printf("\n");
     printf("Student ");
     printstudent(&curstu);
-    printf(" is taking %d courses:\n  ", curstu->numcourses);
-    cur = curstu->clist;
-    while (cur) {
-      printf(" %s%03d", cur->course->depid, cur->course->cid);
-      cur = cur->nextcourse;
+    if (curstu->numcourses <= 0) {
+      printf(" is taking no courses");
+    } else {
+      printf(" is taking %d courses:\n  ", curstu->numcourses);
+      cur = curstu->clist;
+      while (cur) {
+        printf(" %s%03d", cur->course->depid, cur->course->cid);
+        cur = cur->nextcourse;
+      }
     }
     curstu = curstu->next;
     printf("\n");
   }
   while (curcourse) {
     printf("\n");
-    printf("Course ");
+    printf("Course %s%03d (limit %d) ",
+           curcourse->depid,
+           curcourse->cid,
+           curcourse->size);
+    if (curcourse->numenrolled <= 0) {
+      printf("is empty\n");
+    } else {
+      printf("contains %d students:\n", curcourse->numenrolled);
+      cur = curcourse->slist;
+      while (cur) {
+        printf("   ");
+        printstudent(&cur->student);
+        printf("\n");
+        cur = cur->nextstudent;
+      }
+    }
+    curcourse = curcourse->next;
   }
   return 0;
 }
@@ -85,6 +108,8 @@ struct Student* initstudent() {
 
 struct Course* initcourse() {
   struct Course* newcourse = allocate(sizeof(struct Course));
+  newcourse->depid[0] = 0;
+  newcourse->depid[1] = 0;
   newcourse->slist = 0;
   newcourse->next = 0;
   return newcourse;
@@ -105,41 +130,41 @@ void addstudent(struct Student** shead) {
   int sid;
   char* temp;
 
-  temp = strtok(NULL, " ");
+  temp = strtok(NULL, " \t");
   sid = atof(temp);
   if (getstudent(sid, shead)) {
-    perror("sid already exists");
+    fprintf(stderr, "%d already exists\n", sid);
     return;
   }
 
   new = initstudent();
   new->sid = sid;
 
+  temp = strtok(NULL, " \t");
+  strcopy(&(new->last), &temp);
+  temp = strtok(NULL, " \t");
+  if (temp != 0) {
+    strcopy(&(new->first), &temp);
+  }
+  temp = strtok(NULL, " \t");
+  if (temp != 0) {
+    strcopy(&(new->middle), &temp);
+  }
+
   if (*shead == NULL) {
     *shead = new;
-  } else if (new->sid < (*shead)->sid) {
+  } else if (comparestudent(&new, shead) < 0) {
     new->next = *shead;
     *shead = new;
   } else {
     cur = *shead;
-    while (cur->next && cur->next->sid < new->sid) {
+    while (cur->next && comparestudent(&cur->next, &new) < 0) {
       cur = cur->next;
     }
     if (cur->next) {
       new->next = cur->next;
     }
     cur->next = new;
-  }
-
-  temp = strtok(NULL, " ");
-  strcopy(&(new->last), &temp);
-  temp = strtok(NULL, " ");
-  if (temp != 0) {
-    strcopy(&(new->first), &temp);
-  }
-  temp = strtok(NULL, " ");
-  if (temp != 0) {
-    strcopy(&(new->middle), &temp);
   }
 
   if (verbose) {
@@ -155,21 +180,27 @@ void addcourse(struct Course** chead) {
   char* temp;
   char tempid[2];
   int cid;
-  temp = strtok(NULL, " ");
+  temp = strtok(NULL, " \t");
   tempid[0] = temp[0];
   tempid[1] = temp[1];
+  if (strlen(tempid) >= 3) {
+    tempid[2] = 0;
+  }
   temp += 2;
   cid = atof(temp);
   if (getcourse(tempid, cid, chead)) {
-    perror("cid already exists");
+    fprintf(stderr, "%s%03d already exists\n", tempid, cid);
     return;
   }
 
   new = initcourse();
   new->depid[0] = tempid[0];
   new->depid[1] = tempid[1];
+  if (strlen(new->depid) >= 3) {
+    new->depid[2] = 0;
+  }
   new->cid = cid;
-  new->size = atof(strtok(NULL, " "));
+  new->size = atof(strtok(NULL, " \t"));
 
   if (*chead == NULL) {
     *chead = new;
@@ -203,10 +234,10 @@ void addcourse(struct Course** chead) {
 }
 
 void enrollstudent(struct Student** shead, struct Course** chead) {
-  int sid = atof(strtok(NULL, " "));
+  int sid = atof(strtok(NULL, " \t"));
   struct Student* student = getstudent(sid, shead);
   struct Course* course;
-  char* temp = strtok(NULL, " ");
+  char* temp = strtok(NULL, " \t");
   char tempid[2];
   int cid;
 
@@ -219,32 +250,26 @@ void enrollstudent(struct Student** shead, struct Course** chead) {
 
   if (!student) {
     char error[20];
-    sprintf(error, "%05d does not exist", sid);
-    perror(error);
+    fprintf(stderr, "%05d does not exist\n", sid);
   } else if (!course) {
     char error[20];
-    sprintf(error, "%s%03d does not exist", tempid, cid);
-    perror(error);
+    fprintf(stderr, "%s%03d does not exist\n", tempid, cid);
   } else if (student->numcourses == 5) {
     char error[25];
-    sprintf(error, "%05d has a full schedule", sid);
-    perror(error);
+    fprintf(stderr, "%05d has a full schedule\n", sid);
   } else if (course->numenrolled == course->size) {
     char error[13];
-    sprintf(error, "%s%03d is full", tempid, cid);
-    perror(error);
+    fprintf(stderr, "%s%03d is full\n", tempid, cid);
   } else if (hasstudent(&course, sid)) {
     char error[31];
-    sprintf(error, "%05d already enrolled in %s%03d",
+    fprintf(stderr, "%05d already enrolled in %s%03d\n",
             sid,
             course->depid,
             course->cid);
-    perror(error);
   } else {
     struct Enrollment* enrollment = initenrollment();
     enrollment->student = student;
     enrollment->course = course;
-    // Add course to student schedule
     if (student->clist == NULL) {
       student->clist = enrollment;
     } else if (strcmp(enrollment->course->depid, student->clist->course->depid) < 0 ||
@@ -271,16 +296,15 @@ void enrollstudent(struct Student** shead, struct Course** chead) {
         cur->nextcourse = enrollment;
       }
     }
-    // Add student to course list
     if (course->slist == NULL) {
       course->slist = enrollment;
-    } else if (enrollment->student->sid < course->slist->student->sid) {
+    } else if (comparestudent(&enrollment->student, &course->slist->student) < 0) {
       enrollment->nextstudent = course->slist;
       course->slist = enrollment;
     } else {
       struct Enrollment* cur = course->slist;
       while (cur->nextstudent &&
-        cur->nextstudent->student->sid < enrollment->student->sid) {
+        comparestudent(&cur->nextstudent->student, &enrollment->student) < 0) {
         cur = cur->nextstudent;
       }
       if (cur->nextstudent) {
@@ -306,23 +330,19 @@ void dropstudent(struct Student** shead,
                  int cid) {
   struct Student* student = getstudent(sid, shead);
   struct Course* course = getcourse(depid, cid, chead);
-  struct Enrollment* enrollment;
 
   if (!student) {
     char error[20];
-    sprintf(error, "%05d does not exist", sid);
-    perror(error);
+    fprintf(stderr, "%05d does not exist\n", sid);
   } else if (!course) {
     char error[20];
-    sprintf(error, "%s%03d does not exist", depid, cid);
-    perror(error);
+    fprintf(stderr, "%s%03d does not exist\n", depid, cid);
   } else if (!hasstudent(&course, sid)) {
     char error[31];
-    sprintf(error, "%05d not enrolled in %s%03d",
+    fprintf(stderr, "%05d not enrolled in %s%03d\n",
             sid,
             course->depid,
             course->cid);
-    perror(error);
   } else {
     struct Enrollment* cur = course->slist;
     if (!cur->nextstudent || cur->student->sid == student->sid) {
@@ -345,11 +365,10 @@ void dropstudent(struct Student** shead,
       }
       cur->nextcourse = cur->nextcourse->nextcourse;
     }
-    unallocate(cur);
     student->numcourses--;
     course->numenrolled--;
     if (verbose) {
-      printf("%05d dropped from %s%03d",
+      printf("%05d dropped from %s%03d\n",
              student->sid,
              course->depid,
              course->cid);
@@ -360,7 +379,7 @@ void dropstudent(struct Student** shead,
 void removecourse(struct Student** shead, struct Course** chead) {
   struct Course* course;
   struct Enrollment* enrollment;
-  char* temp = strtok(NULL, " ");
+  char* temp = strtok(NULL, " \t");
   char tempid[2];
   int cid;
 
@@ -370,6 +389,11 @@ void removecourse(struct Student** shead, struct Course** chead) {
   cid = atof(temp);
 
   course = getcourse(tempid, cid, chead);
+
+  if (!course) {
+    printf("%s%03d does not exist\n", tempid, cid);
+    return;
+  }
 
   enrollment = course->slist;
   int v = verbose;
@@ -381,6 +405,17 @@ void removecourse(struct Student** shead, struct Course** chead) {
                 course->depid,
                 course->cid);
     enrollment = enrollment->nextstudent;
+  }
+  if (!strcmp(course->depid, (*chead)->depid) &&
+      course->cid == (*chead)->cid) {
+    (*chead) = (*chead)->next;
+  } else {
+    struct Course* cur = *chead;
+    while (strcmp(course->depid, cur->next->depid) ||
+           course->cid != cur->next->cid) {
+      cur = cur->next;
+    }
+    cur->next = cur->next->next;
   }
   verbose = v;
   if (verbose) {
@@ -453,7 +488,7 @@ void readfiles(struct Student** shead,
 
   while (fgets(inputbuffer, MAX_BUFFER_LENGTH, fp) != NULL) {
     inputbuffer[strlen(inputbuffer) - 1] = 0;
-    strtok(inputbuffer, " ");
+    char* test = strtok(inputbuffer, " \t");
     addcourse(chead);
   }
 
@@ -462,9 +497,31 @@ void readfiles(struct Student** shead,
 
   while (fgets(inputbuffer, MAX_BUFFER_LENGTH, fp) != NULL) {
     inputbuffer[strlen(inputbuffer) - 1] = 0;
-    strtok(inputbuffer, " ");
+    strtok(inputbuffer, " \t");
     addstudent(shead);
   }
 
   fclose(fp);
+}
+
+int comparestudent(struct Student** stu1, struct Student** stu2) {
+  if (strcmp((*stu1)->last, (*stu2)->last) < 0) {
+    return -1;
+  } else if (strcmp((*stu1)->last, (*stu2)->last) > 0) {
+    return 1;
+  } else {
+    if (strcmp((*stu1)->first, (*stu2)->first) < 0) {
+      return -1;
+    } else if (strcmp((*stu1)->first, (*stu2)->first) > 0) {
+      return 1;
+    } else {
+      if (strcmp((*stu1)->middle, (*stu2)->middle) < 0) {
+        return -1;
+      } else if (strcmp((*stu1)->middle, (*stu2)->middle) > 0) {
+        return 1;
+      } else {
+        return (*stu1)->sid - (*stu2)->sid;
+      }
+    }
+  }
 }
