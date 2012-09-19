@@ -1,9 +1,10 @@
-#ifndef SIS_H_
-#define SIS_H
+#ifndef PROJECT1_H_
+#define PROJECT1_H
+
+#include "allocate.h"
+#include <stdint.h>
 
 #define MAX_BUFFER_LENGTH 255
-#define TRUE 1
-#define FALSE 0
 
 struct Course;
 struct Enrollment;
@@ -13,7 +14,6 @@ struct Enrollment;
 // the next Student in the linked list.
 struct Student {
   int sid;
-  int numcourses;
   char* first;
   char* middle;
   char* last;
@@ -27,8 +27,7 @@ struct Student {
 struct Course {
   char depid[3];
   short cid;
-  short numenrolled;
-  short size;
+  uint8_t size;
   struct Enrollment* slist;
   struct Course* next;
 };
@@ -43,48 +42,32 @@ struct Enrollment {
 // Copies a string from one buffer to another.
 void strcopy(char** dest, char** src);
 
-// Initializes a student.
-struct Student* initstudent();
-
-// Initializes a course.
-struct Course* initcourse();
-
-// Initializes an enrollment.
-struct Enrollment* initenrollment();
-
 // Adds a student to the database.
-void addstudent(struct Student** shead);
+void addstudent();
 
-void addcourse(struct Course** chead);
+void addcourse();
 
-void enrollstudent(struct Student** shead, struct Course** chead);
+void enrollstudent();
 
-void dropstudent(struct Student** shead,
-                 struct Course** chead,
-                 int sid,
-                 char depid[2],
-                 int cid);
+void dropstudent(int sid, char depid[2], short cid);
 
-void removecourse(struct Student** shead, struct Course** chead);
+void removecourse();
 
-struct Student* getstudent(int sid, struct Student** shead);
+struct Student* getstudent(int sid);
 
-struct Course* getcourse(char depid[2], int cid, struct Course** chead);
+struct Course* getcourse(char depid[2], short cid);
 
 int hasstudent(struct Course** course, int sid);
 
-// Prints a student's information to the console.
 void printstudent(struct Student** student);
 
-void printcourse(struct Course** course);
-
-void readfiles(struct Student** shead,
-               struct Course** chead,
-               char** coursefile,
-               char** studentfile,
-               char inputbuffer[]);
+void readfiles(char** coursefile, char** studentfile);
 
 int comparestudent(struct Student** stu1, struct Student** stu2);
 
-void clearmem(struct Student** shead, struct Course** chead);
+void clearmem();
+
+uint8_t numenrolled(struct Course** course);
+
+uint8_t numcourses(struct Student** student);
 #endif
