@@ -61,8 +61,6 @@ int hasstudent(struct Course** course, int sid);
 
 void printstudent(struct Student** student);
 
-void readfiles(char** coursefile, char** studentfile);
-
 int comparestudent(struct Student** stu1, struct Student** stu2);
 
 void clearmem();

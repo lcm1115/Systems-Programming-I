@@ -24,7 +24,33 @@ int main(int argc, char** argv) {
   if (argc == 4) {
     verbose = 1;
   }
-  readfiles(&argv[argc - 2], &argv[argc - 1]);
+  temp = argv[argc - 2];
+
+  FILE* fp;
+READ:
+  fp = fopen(temp, "r");
+  if (!fp) {
+    perror(temp);
+    clearmem();
+    exit(-1);
+  }
+
+  while (fgets(input, MAX_BUFFER_LENGTH, fp) != NULL) {
+    input[strlen(input) - 1] = 0;
+    char* test = strtok(input, " \t");
+    if (!strcmp(temp, argv[argc - 2])) {
+      addcourse();
+    } else {
+      addstudent();
+    }
+  }
+
+  fclose(fp);
+  if (strcmp(temp, argv[argc - 1])) {
+    temp = argv[argc - 1];
+    goto READ;
+  }
+
   while (fgets(input, MAX_BUFFER_LENGTH, stdin)) {
     input[strlen(input) - 1] = 0;
     temp = strtok(input, " \t");
@@ -476,38 +502,6 @@ void printstudent(struct Student** student) {
   if ((*student)->first != 0) printf(" %s", (*student)->first);
   if ((*student)->middle != 0) printf(" %s", (*student)->middle);
   printf(")");
-}
-
-void readfiles(char** coursefile,
-               char** studentfile) {
-  FILE* fp = fopen(*coursefile, "r");
-  if (!fp) {
-    perror(*coursefile);
-    clearmem();
-    exit(-1);
-  }
-
-  while (fgets(input, MAX_BUFFER_LENGTH, fp) != NULL) {
-    input[strlen(input) - 1] = 0;
-    char* test = strtok(input, " \t");
-    addcourse();
-  }
-
-  fclose(fp);
-  fp = fopen(*studentfile, "r");
-  if (!fp) {
-    perror(*studentfile);
-    clearmem();
-    exit(-1);
-  }
-
-  while (fgets(input, MAX_BUFFER_LENGTH, fp) != NULL) {
-    input[strlen(input) - 1] = 0;
-    strtok(input, " \t");
-    addstudent();
-  }
-
-  fclose(fp);
 }
 
 int comparestudent(struct Student** stu1, struct Student** stu2) {
