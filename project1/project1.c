@@ -32,9 +32,7 @@ char* input;
 int main(int argc, char** argv) {
   input = allocate(MAX_BUFFER_LENGTH);
   if (!input) {
-    printf("Memory allocation failed!\n");
-    clearmem();
-    exit(-1);
+    memfail();
   }
   char* temp;
   // Checks that flags are valid.
@@ -206,9 +204,7 @@ void strcopy(char** dest, char** src) {
   // Allocate strlen + 1 bytes for the new buffer (to account for NULL-byte)
   *dest = allocate(strlen(*src) + 1);
   if (!dest) {
-    printf("Memory allocation failed!\n");
-    clearmem();
-    exit(-1);
+    memfail();
   }
 
   // Copy contents
@@ -234,9 +230,7 @@ void addstudent() {
   // Allocate memory for the new student and initialize all fields.
   new = allocate(sizeof(struct Student));
   if (!new) {
-    printf("Memory allocation failed!\n");
-    clearmem();
-    exit(-1);
+    memfail();
   }
   new->first = 0;
   new->middle = 0;
@@ -310,9 +304,7 @@ void addcourse() {
   // Allocate new course and initialize all fields.
   new = allocate(sizeof(struct Course));
   if (!new) {
-    printf("Memory allocation failed!\n");
-    clearmem();
-    exit(-1);
+    memfail();
   }
   new->depid[0] = tempid[0];
   new->depid[1] = tempid[1];
@@ -405,9 +397,7 @@ void enrollstudent() {
     // Allocate enrollment and initialize all fields.
     struct Enrollment* enrollment = allocate(sizeof(struct Enrollment));
     if (!enrollment) {
-      printf("Memory allocation failed!\n");
-      clearmem();
-      exit(-1);
+      memfail();
     }
     enrollment->nextstudent = 0;
     enrollment->nextcourse = 0;
@@ -686,4 +676,11 @@ uint8_t numcourses(struct Student** student) {
     ++numcourses;
   }
   return numcourses;
+}
+
+// Prints memory allocation failure error, deallocates memory, and exits.
+void memfail() {
+  fprintf(stderr, "Memory allocation failed!\n");
+  clearmem();
+  exit(-1);
 }

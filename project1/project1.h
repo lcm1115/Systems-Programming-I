@@ -158,4 +158,8 @@ uint8_t numenrolled(struct Course** course);
 // Arguments:
 //     student - pointer to Student
 uint8_t numcourses(struct Student** student);
+
+// Prints memory allocation failure error, deallocates memory, and exits the
+// program.
+void memfail();
 #endif
