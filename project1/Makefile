@@ -1,5 +1,5 @@
 #
-# Created by gmakemake (Ubuntu Sep  7 2011) on Mon Sep 24 16:00:52 2012
+# Created by gmakemake (Ubuntu Sep  7 2011) on Mon Sep 24 16:01:44 2012
 #
 
 #
@@ -56,11 +56,11 @@ CPP_FILES =
 C_FILES =	project1.c
 PS_FILES =	
 S_FILES =	
-H_FILES =	allocate.h project1.h
+H_FILES =	project1.h
 SOURCEFILES =	$(H_FILES) $(CPP_FILES) $(C_FILES) $(S_FILES)
 .PRECIOUS:	$(SOURCEFILES)
 OBJFILES =	
-LOCAL_LIBS =	liballocate-ubuntu86.a liballocate.a
+LOCAL_LIBS =	liballocate-ubuntu86.a
 
 #
 # Main targets
