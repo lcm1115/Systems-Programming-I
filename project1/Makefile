@@ -1,5 +1,5 @@
 #
-# Created by gmakemake (Ubuntu Sep  7 2011) on Wed Sep 12 16:27:41 2012
+# Created by gmakemake (Ubuntu Sep  7 2011) on Mon Sep 24 16:00:52 2012
 #
 
 #
@@ -41,37 +41,41 @@ LINK.cc = $(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS)
 COMPILE.c = $(CC) $(CFLAGS) $(CPPFLAGS) -c
 COMPILE.cc = $(CXX) $(CXXFLAGS) $(CPPFLAGS) -c
 CPP = $(CPP) $(CPPFLAGS)
-########## Default flags (redefine these with a header.mak file if desired)
-CXXFLAGS =	-ggdb
-CFLAGS =	-ggdb
-CLIBFLAGS =	-lm
-CCLIBFLAGS =	
-########## End of default flags
+########## Flags from header.mak
+
+ALLOCDIR =	/usr/local/pub/wrc/courses/sp1/allocate
+CC =		gcc
+CFLAGS =	-ggdb -std=c99 -I$(ALLOCDIR)
+LIBFLAGS =	-L$(ALLOCDIR) -lallocate
+CLIBFLAGS =	$(LIBFLAGS)
+
+########## End of flags from header.mak
 
 
 CPP_FILES =	
-C_FILES =	sis.c
+C_FILES =	project1.c
 PS_FILES =	
 S_FILES =	
-H_FILES =	allocate.h sis.h
+H_FILES =	allocate.h project1.h
 SOURCEFILES =	$(H_FILES) $(CPP_FILES) $(C_FILES) $(S_FILES)
 .PRECIOUS:	$(SOURCEFILES)
 OBJFILES =	
+LOCAL_LIBS =	liballocate-ubuntu86.a liballocate.a
 
 #
 # Main targets
 #
 
-all:	sis 
+all:	project1 
 
-sis:	sis.o $(OBJFILES)
-	$(CC) $(CFLAGS) -o sis sis.o $(OBJFILES) $(CLIBFLAGS)
+project1:	project1.o $(OBJFILES)
+	$(CC) $(CFLAGS) -o project1 project1.o $(OBJFILES) $(LOCAL_LIBS) $(CLIBFLAGS)
 
 #
 # Dependencies
 #
 
-sis.o:	allocate.h
+project1.o:	project1.h
 
 #
 # Housekeeping
@@ -83,7 +87,7 @@ archive.tgz:	$(SOURCEFILES) Makefile
 	tar cf - $(SOURCEFILES) Makefile | gzip > archive.tgz
 
 clean:
-	-/bin/rm $(OBJFILES) sis.o core 2> /dev/null
+	-/bin/rm $(OBJFILES) project1.o core 2> /dev/null
 
 realclean:        clean
-	-/bin/rm -rf sis 
+	-/bin/rm -rf project1 

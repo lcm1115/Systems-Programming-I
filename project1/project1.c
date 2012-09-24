@@ -1,4 +1,5 @@
-/* File: project1.c
+/* 
+** File: project1.c
 ** Author: Liam Morris - lcm1115
 ** Description: Implements a basic course and student database. Allows for
 **              adding new courses, adding new students, registering students
@@ -11,7 +12,7 @@
 **              If the flag -v is set, verbose mode is enabled which prints out
 **              messages when certain commands finish.
 */
-#include "allocate.h"
+#include <allocate.h>
 #include "project1.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -162,6 +163,7 @@ READ:
   clearmem();
 }
 
+// Unallocates all dynamically allocated memory
 void clearmem() {
   struct Student* curs = shead;
   struct Student* prevs;
@@ -198,6 +200,8 @@ void clearmem() {
   unallocate(input);
 }
 
+// Allocates memory for a destination buffer, then copies the contents of a
+// source buffer into it.
 void strcopy(char** dest, char** src) {
   // Allocate strlen + 1 bytes for the new buffer (to account for NULL-byte)
   *dest = allocate(strlen(*src) + 1);
@@ -211,6 +215,7 @@ void strcopy(char** dest, char** src) {
   strcpy(*dest, *src);
 }
 
+// Adds a new student to the database.
 void addstudent() {
   struct Student* new;
   struct Student* cur;
@@ -282,6 +287,7 @@ void addstudent() {
   }
 }
 
+// Adds a new course to the database.
 void addcourse() {
   struct Course* new;
   struct Course* cur;
@@ -355,6 +361,7 @@ void addcourse() {
                        new->size);
 }
 
+// Enrolls a student in a course.
 void enrollstudent() {
   // Get pointer to student.
   int sid = atof(strtok(NULL, " \t"));
@@ -471,6 +478,7 @@ void enrollstudent() {
   }
 }
 
+// Drops a student from a course.
 void dropstudent(int sid,
                  char depid[2],
                  short cid) {
@@ -529,6 +537,7 @@ void dropstudent(int sid,
   }
 }
 
+// Drops all students from a course and removes it from the database.
 void removecourse() {
   struct Course* course;
   struct Enrollment* enrollment;
@@ -584,6 +593,7 @@ void removecourse() {
   unallocate(course);
 }
 
+// Returns a pointer to a Student with a specified ID
 struct Student* getstudent(int sid) {
   struct Student* cur = shead;
   // Iterate through linked list until student ID is found.
@@ -593,6 +603,7 @@ struct Student* getstudent(int sid) {
   return cur;
 }
 
+// Returns a pointer to a Course with a specified department ID and course ID
 struct Course* getcourse(char depid[2], short cid) {
   struct Course* cur = chead;
   // Iterate through linked list until department ID and course ID is found.
@@ -602,6 +613,7 @@ struct Course* getcourse(char depid[2], short cid) {
   return cur;
 }
 
+// Returns whether or not a Student is specified in a Course
 uint8_t hasstudent(struct Course** course, int sid) {
   // Iterate through roster until student with specified student ID is found.
   // Return 1 if it is found, return 0 otherwise.
@@ -616,15 +628,16 @@ uint8_t hasstudent(struct Course** course, int sid) {
   }
 }
 
+// Prints a student ID and name(s) in the following format:
+// SID (Last [First [Middle]])
 void printstudent(struct Student** student) {
-  // Prints a student ID and name(s) in the following format:
-  // SID (Last [First [Middle]])
   printf("%05d (%s", (*student)->sid, (*student)->last);
   if ((*student)->first != 0) printf(" %s", (*student)->first);
   if ((*student)->middle != 0) printf(" %s", (*student)->middle);
   printf(")");
 }
 
+// Compares tow students for equality.
 int comparestudent(struct Student** stu1, struct Student** stu2) {
   // Compare last names.
   if (strcmp((*stu1)->last, (*stu2)->last) < 0) {
@@ -651,6 +664,7 @@ int comparestudent(struct Student** stu1, struct Student** stu2) {
   }
 }
 
+// Returns the number of Students enrolled in a Course
 uint8_t numenrolled(struct Course** course) {
   // Iterate through linked list and count how many students are looked at.
   struct Enrollment* cur = (*course)->slist;
@@ -662,6 +676,7 @@ uint8_t numenrolled(struct Course** course) {
   return numenrolled;
 }
 
+// Returns the number of Courses a Student is enrolled in.
 uint8_t numcourses(struct Student** student) {
   // Iterate through linked list and count how many courses are looked at.
   struct Enrollment* cur = (*student)->clist;
