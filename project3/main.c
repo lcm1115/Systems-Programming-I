@@ -38,8 +38,9 @@ int main( void ) {
         unsigned int sd = vals[0] ^ vals[1] ^ vals[2];
 
         PutSeed(sd);
-
+        int total_clocks = 0;
         while (1) {
+          int clocks = 0;
           c_puts("\nPress the enter key when you are ready\n");
           unsigned int input = 0;
           while (input != 10 && input != 15) {
@@ -53,6 +54,7 @@ int main( void ) {
             input = c_getchar();
             c_putchar(10);
           } while (input != ch);
+          total_clocks += clocks;
           c_puts("Another try?\n");
           do {
             input = c_getchar();
