@@ -1,4 +1,22 @@
-extern char c = 0;
+/*
+** File:        isr.c
+**
+** Author:      Liam Morris
+**
+** Description: This program contains the code for the ISR for both the clock
+**              and the serial receiver/transmitter. This allows for the main
+**              program to interface with the serial device to read and write
+**              data from and to the terminal.
+*/
+
+#include "startup.h"
+#include "uart.h"
+#include "x86arch.h"
+
+extern int newchar;
+extern int tick_count;
+extern int nums[256];
+extern char c;
 
 // ISR handling for clock cycle.
 // Increments tick_count on each interrupt.

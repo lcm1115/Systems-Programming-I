@@ -3,7 +3,10 @@
 **
 ** Author:	Liam Morris
 **
-** Description:	Dummy main program
+** Description:	Main program for executing a reaction timer program on an ADDS
+**              terminal. This file contains the logic for the actual flow of
+**              the program and relies on functions contained in the ISR for
+**              sending and receiving data to and from the terminal.
 */
 #include "c_io.h"
 #include "isr.h"
@@ -27,7 +30,7 @@ int num_rounds = 0;
 int nums[256];
 
 // Current character in the buffer (buffer size of 1)
-extern char c = 0;
+char c = 0;
 
 int main( void ) {
   // Initialize terminal.
