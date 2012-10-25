@@ -32,6 +32,10 @@ int nums[256];
 // Current character in the buffer (buffer size of 1)
 char c = 0;
 
+char* next_output_ch = 0;
+
+char BEL = 0x7;
+
 int main( void ) {
   // Initialize terminal.
   init();
@@ -40,38 +44,38 @@ int main( void ) {
   __install_isr(INT_VEC_TIMER, clock_isr);
   __install_isr(INT_VEC_SERIAL_PORT_1, serial_isr);
 
+  // Enable interrupts
+  __asm("sti");
+
   // Enable terminal.
   __outb(UA4_IER, 0xf);
 
   // Clear the screen.
-  serial_putchar(0x1a);
-
-  // Enable interrupts.
-  __asm("sti");
+  __outb(UA4_TXD, 0x1a);
+  c_puts("Cleared Screen\n");
 
   // Print basic information to the terminal.
   char seed[12];
-  serial_puts("Team:\nLiam Morris\n");
-  serial_puts("Clock is ticking at the default rate\n");
-  serial_puts("Enter twelve-character seed: ");
+  serial_write("Team:\n\rLiam Morris\n\r");
+  serial_write("Clock is ticking at the default rate\n\r");
+  serial_write("Enter twelve-character seed: ");
 
   // Read in seed from terminal.
   for (int i = 0; i < 12; ++i) {
     newchar = 0;
-    c_puts("Waiting for new char\n");
     while (!newchar);
-    c_printf("Got new char: %c\n", c);
     // If new line is entered, send BEL to terminal.
     if (c == 10 || c == 15) {
       --i;
-      serial_putchar(7);
+      serial_write(&BEL);
     }
     // Otherwise, store character in buffer.
     else {
       seed[i] = c;
-      serial_putchar(c);
+      serial_write(&c);
     }
   }
+  c_printf("Seed: %s\n", seed);
   
   unsigned int vals[3];
 
@@ -92,7 +96,7 @@ int main( void ) {
   // Start the program!
   while (1) {
     ++num_rounds;
-    serial_puts("\nPress the enter key when you are ready\n");
+    serial_write("\n\rPress the enter key when you are ready\n\r");
     c = 0;
 
     // Wait for enter key.
@@ -101,13 +105,13 @@ int main( void ) {
     // Get random character [a-z], print it to the terminal, and reset tick
     // counter to 0.
     int ch = Random() * 25 + 'a';
-    serial_putchar(ch);
+    serial_write(&ch);
     tick_count = 0;
 
     // Wait for correct character to be entered.
     // Each time an incorrect character is entered, send BEL to terminal.
     while (c != ch) {
-      serial_putchar(7);
+      serial_write(&BEL);
       newchar = 0;
       while (!newchar);
     }
@@ -117,20 +121,20 @@ int main( void ) {
     int ticks = tick_count;
     total_clocks += ticks;
     double average = (double) total_clocks / (double) num_rounds;
-    c_printf("\nTicks: %d Total Clocks: %d Num Rounds: %d",
+    c_printf("\nTicks: %d Total Clocks: %d Num Rounds: %d\n",
               ticks, total_clocks, num_rounds);
 
     // Print timing statistics.
-    serial_puts("\nCurrent:  ");
+    serial_write("\n\rCurrent:  ");
     serial_putd(ticks);
-    serial_puts("   Average:  ");
+    serial_write("   Average:  ");
     serial_putx(average);
-    serial_puts(" (");
+    serial_write(" (");
     serial_putd(num_rounds);
-    serial_puts(" rounds)");
+    serial_write(" rounds)");
 
     // Prompt for another round.
-    serial_puts("\nAnother try?\n");
+    serial_write("\n\rAnother try?\n\r");
     c = 0;
     while (1) {
       newchar = 0;
@@ -141,11 +145,13 @@ int main( void ) {
       }
       // For all other characters, send a BEL to the terminal.
       else {
-        serial_putchar(7);
+        serial_write(&BEL);
       }
     }
     // If user enters 'n', exit program.
     if (c == 'n') {
+      serial_write(":(");
+      __delay(1);
       break;
     }
   }

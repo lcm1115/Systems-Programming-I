@@ -9,14 +9,45 @@
 **              data from and to the terminal.
 */
 
+#include "c_io.h"
 #include "startup.h"
 #include "uart.h"
 #include "x86arch.h"
 
+int interrupt_state = 0;
+char output_buffer[256];
+int buf_index = 0;
 extern int newchar;
 extern int tick_count;
-extern int nums[256];
+extern char nums[256];
 extern char c;
+extern char *next_output_ch;
+extern char *next_input_ch;
+extern int input_space_left;
+
+void strcpy(char* src, char* dest) {
+  while (*dest != 0) {
+    *src = *dest;
+    ++src;
+    ++dest;
+  }
+}
+
+void strcat(char* src, char* dest) {
+  int i = 0;
+  char* ptr1 = src;
+  char* ptr2 = dest;
+  while (*ptr1 != 0) {
+    ptr1++;
+    i++;
+  }
+  while (ptr1 && ptr2 && *ptr2 != 0) {
+    *ptr1 = *ptr2;
+    ptr1++;
+    ptr2++;
+    i++;
+  }
+}
 
 // ISR handling for clock cycle.
 // Increments tick_count on each interrupt.
@@ -30,27 +61,23 @@ void clock_isr(int vector, int code) {
 // Writes a character to the terminal.
 // Arguments:
 //   ch - character to write to the terminal
-void serial_putchar(char ch) {
-  // If character is a new line, replace it with a carriage return.
-  if (ch == '\n') {
-    serial_putchar('\r');
-  }
+void serial_write(char* user_buffer) {
+  __asm("cli");
 
-  // Wait until ready to transmit.
-  while ((__inb(UA4_LSR) & UA4_LSR_TXRDY) == 0);
+  if ((interrupt_state & UA4_IER_TX_INT_ENABLE) != 0) {
+    strcat(output_buffer, user_buffer);
+    __asm("sti");
+  } else {
+    char ch;
 
-  // Send byte to terminal.
-  __outb(UA4_TXD, ch);
-}
-
-// Writes a string to the terminal.
-// Arguments:
-//   buffer - null-terminated string to be written to the terminal
-void serial_puts(char* buffer) {
-  char ch;
-  // Write each character in the buffer until null is reached.
-  while ((ch = *buffer++) != '\0') {
-    serial_putchar(ch);
+    __asm("sti");
+    ch = *user_buffer;
+    if (ch != 0) {
+      strcpy(output_buffer, user_buffer + 1);
+      next_output_ch = output_buffer;
+      interrupt_state |= UA4_IER_TX_INT_ENABLE;
+      __outb(UA4_TXD, ch);
+    }
   }
 }
 
@@ -80,16 +107,19 @@ void serial_putd(int d) {
     // Get current digit to write, then store it in array
     int n = d % 10;
     d /= 10;
-    nums[i] = n;
+    nums[i] = '0' + n;
     ++i;
   }
-  --i;
-
-  // Iterate across array backwards and write each value to the terminal.
-  while (i >= 0) {
-    serial_putchar('0' + nums[i]);
-    --i;
+  nums[i] = 0;
+  int digits = i;
+  i--;
+  for (int j = 0; j < digits / 2; j++, i--) {
+    nums[i] ^= nums[j];
+    nums[j] ^= nums[i];
+    nums[i] ^= nums[j];
   }
+  // Iterate across array backwards and write each value to the terminal.
+  serial_write(nums);
 }
 
 // Writes a double to the terminal.
@@ -100,9 +130,10 @@ void serial_putx(double x) {
   int d = (int) x;
   serial_putd(d);
 
-  // We need a decimal point!
-  serial_putchar('.');
+  char* dec = ".";
 
+  // We need a decimal point!
+  serial_write(dec);
   // Take the decimal value and print it to the terminal.
   int r = (int) (x * 10) % 10;
   serial_putd(r);
@@ -112,6 +143,7 @@ void serial_putx(double x) {
 // Reads in bytes and handles all interrupts as needed.
 void serial_isr(int vector, int code) {
   int br = 0;
+  char nextch;
   // Loop until there is no interrupt in the terminal.
   while (!br) {
     // Get the interrupt ID
@@ -125,13 +157,25 @@ void serial_isr(int vector, int code) {
       case UA4_EIR_RX_HIGH:
         c = serial_getchar();
         newchar = 1;
+        c_printf("Received: %c\n", c);
         break;
       case UA5_EIR_RX_FIFO_TO:
-        c = serial_getchar();
-        newchar = 1;
+        __inb(UA4_RXD);
+        c_printf("ERROR: Shouldn't be in FIFO!\n");
         break;
       case UA4_EIR_TX_LOW:
-        __inb(UA4_EIR);
+        nextch = *next_output_ch;
+
+        if (nextch != 0) {
+          next_output_ch++;
+          __outb(UA4_TXD, nextch);
+        } else {
+          c_puts("Buffer Empty\n");
+          interrupt_state &= ~UA4_IER_TX_INT_ENABLE;
+          for (int i = 0; i < 256; ++i) {
+            output_buffer[i] = 0;
+          }
+        }
         break;
       case UA4_EIR_MODEM_STATUS:
         __inb(UA4_MSR);

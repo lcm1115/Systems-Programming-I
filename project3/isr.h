@@ -2,9 +2,7 @@ void clock_isr(int vector, int code);
 
 void serial_isr(int vector, int code);
 
-void serial_putchar(char ch);
-
-void serial_puts(char* buffer);
+void serial_write(char* buffer);
 
 int serial_getchar(void);
 
