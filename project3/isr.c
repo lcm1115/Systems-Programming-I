@@ -14,17 +14,24 @@
 #include "uart.h"
 #include "x86arch.h"
 
+// Current state of the transmitter interrupt.
 int interrupt_state = 0;
+
+// Output buffer for use in transmitting data.
 char output_buffer[256];
-int buf_index = 0;
+
+// Next character to be transmitted to the terminal.
+char *next_output_ch;
+
 extern int newchar;
 extern int tick_count;
 extern char nums[256];
 extern char c;
-extern char *next_output_ch;
-extern char *next_input_ch;
-extern int input_space_left;
 
+// Implementation of strcpy. Copies one string into another.
+// Arguments:
+//   src - buffer to copy data into
+//   dest - buffer to copy data from
 void strcpy(char* src, char* dest) {
   while (*dest != 0) {
     *src = *dest;
@@ -33,6 +40,10 @@ void strcpy(char* src, char* dest) {
   }
 }
 
+// Implementation of strcat. Concatenates two strings.
+// Arguments:
+//   src - buffer to concatenate data onto.
+//   dest - buffer to read data from to concatenate
 void strcat(char* src, char* dest) {
   int i = 0;
   char* ptr1 = src;
@@ -64,6 +75,9 @@ void clock_isr(int vector, int code) {
 void serial_write(char* user_buffer) {
   __asm("cli");
 
+  // Determine if currently transmitting.
+  // If so, concatenate buffer onto output buffer.
+  // Otherwise, copy buffer onto output buffer and write first character.
   if ((interrupt_state & UA4_IER_TX_INT_ENABLE) != 0) {
     strcat(output_buffer, user_buffer);
     __asm("sti");
@@ -75,7 +89,11 @@ void serial_write(char* user_buffer) {
     if (ch != 0) {
       strcpy(output_buffer, user_buffer + 1);
       next_output_ch = output_buffer;
+
+      // Update state.
       interrupt_state |= UA4_IER_TX_INT_ENABLE;
+
+      // Remove stopper! (Write first character)
       __outb(UA4_TXD, ch);
     }
   }
@@ -113,6 +131,8 @@ void serial_putd(int d) {
   nums[i] = 0;
   int digits = i;
   i--;
+
+  // Swap order of digits.
   for (int j = 0; j < digits / 2; j++, i--) {
     nums[i] ^= nums[j];
     nums[j] ^= nums[i];
@@ -154,6 +174,7 @@ void serial_isr(int vector, int code) {
       case UA4_EIR_LINE_STATUS:
         __inb(UA4_LSR);
         break;
+      // Get character from terminal, update globals accordingly.
       case UA4_EIR_RX_HIGH:
         c = serial_getchar();
         newchar = 1;
@@ -163,9 +184,13 @@ void serial_isr(int vector, int code) {
         __inb(UA4_RXD);
         c_printf("ERROR: Shouldn't be in FIFO!\n");
         break;
+      // Transmit data to terminal.
       case UA4_EIR_TX_LOW:
+        // Get character to write.
         nextch = *next_output_ch;
 
+        // If not null, write to terminal.
+        // Otherwise, reset buffer and update interrupt state.
         if (nextch != 0) {
           next_output_ch++;
           __outb(UA4_TXD, nextch);
