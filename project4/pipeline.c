@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
       }
       dup2(write_fd, 1);
       close(write_fd);
-      argc = i;
+      if (argc == bound + 1) argc = i;
     }
     if (!strcmp(argv[i], "<")) {
       read_fd = open(argv[i+1], O_RDONLY);
@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
         perror(argv[i+1]);
         exit(-1);
       }
-      argc = i;
+      if (argc == bound + 1) argc = i;
     }
   }
 
@@ -236,6 +236,8 @@ int main(int argc, char** argv) {
   }
   
   else {
+    dup2(read_fd, 0);
+    close(read_fd);
     execvp(command[0], command);
   }
 
