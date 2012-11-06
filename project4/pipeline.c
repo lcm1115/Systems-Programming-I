@@ -4,28 +4,58 @@
 #include <string.h>
 #include <unistd.h>
 
+// Global Variables
+
+// Current command being processed.
 char** command;
+
+// Current index in argv when searching for commands.
 int curIndex;
+
+// Previous value of curIndex when searching for commands.
 int prevIndex;
-int numCommands = 0;
+
+// Number of arguments in the current command.
+int numArgs = 0;
+
+// Number of processes remaining to execute.
 int numProcesses = 1;
+
+// Total number of processes to execute.
+int totalNumProcesses;
+
+// File descriptors for I/O redirection with pipes.
 int fd[2];
 
+// File descriptors for file I/O.
+int read_fd = -1;
+int write_fd = -1;
+
+// Implementation of strdup.
+// Arguments:
+//   str - string to be copied
+// Returns:
+//   A new cstring containing whose content is the same as str.
 char* strdup(char* str) {
   char* new = (char*) malloc(strlen(str) + 1);
+  if (!new) {
+    return 0;
+  }
   new[strlen(str)] = 0;
   strcpy(new, str);
 
   return new;
 }
 
+// Frees all cstrings in a given command buffer.
 void freeCommand() {
-  for (int i = 0; i < numCommands; ++i) {
+  for (int i = 0; i < numArgs; ++i) {
     free(command[i]);
   }
   free(command);
 }
 
+// Validates input and ensures that command line input is legal.
 int validateInput(int argc, char** argv) {
   int output = 0;
   int input = 0;
@@ -91,19 +121,29 @@ int nextSpecial(int startIndex, char** argv) {
 
 // Get's the next command and command arguments between two indices of argv.
 void getNextCommand(int startIndex, int endIndex, char** argv) {
+  // Free old command buffer.
   freeCommand();
-  numCommands = endIndex - startIndex + 1;
-  command = (char**) malloc(sizeof(char*) * numCommands + 1);
-  command[numCommands] = 0;
 
-  for (int i = 0; i < numCommands; ++i) {
+  // Allocate space for each argument.
+  numArgs = endIndex - startIndex + 1;
+  command = (char**) malloc(sizeof(char*) * numArgs + 1);
+  command[numArgs] = 0;
+  
+  // Copy each argument into the command buffer.
+  for (int i = 0; i < numArgs; ++i) {
     command[i] = strdup(argv[i + startIndex]);
+    if (!command[i]) {
+      fprintf(stderr, "Memory error\n");
+    }
   }
 }
 
+// Execute next command.
 void executeNext(int argc, char** argv) {
   --numProcesses;
-  pipe(fd);
+  if (pipe(fd) < 0) {
+    perror("pipe");
+  }
   int pid = fork();
   switch (pid) {
     case -1:
@@ -116,6 +156,13 @@ void executeNext(int argc, char** argv) {
       curIndex = nextSpecial(curIndex, argv);
       if (curIndex == -1) curIndex = 0;
       getNextCommand(curIndex + 1, prevIndex, argv);
+
+      // If this is the first command on the pipeline and input is received from
+      // a file, dup the file descriptor onto stdin.
+      if (read_fd != -1 && numProcesses <= 1) {
+        dup2(read_fd, 0);
+        close(read_fd);
+      }
       close(fd[0]);
       dup2(fd[1], 1);
       close(fd[1]);
@@ -137,25 +184,58 @@ void executeNext(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+  if (argc == 1) {
+    return 0;
+  }
+  // Check input for validity.
   if (!validateInput(argc - 1, &argv[1])) {
     return -1;
   }
 
+  // Count number of processes on the pipeline.
   for (int i = 0; argv[i] != 0; ++i) {
     if (!strcmp(argv[i], "|")) {
       ++numProcesses;
     }
   }
+  totalNumProcesses = numProcesses;
 
+  // Open files as needed for I/O redirection.
+  int bound = argc - 1;
+  for (int i = 0; i < bound; ++i) {
+    if (!strcmp(argv[i], ">")) {
+      write_fd = open(argv[i+1], O_CREAT | O_WRONLY);
+      if (write_fd < 0) {
+        perror(argv[i+1]);
+        exit(-1);
+      }
+      dup2(write_fd, 1);
+      close(write_fd);
+      argc = i;
+    }
+    if (!strcmp(argv[i], "<")) {
+      read_fd = open(argv[i+1], O_RDONLY);
+      if (read_fd < 0) {
+        perror(argv[i+1]);
+        exit(-1);
+      }
+      argc = i;
+    }
+  }
+
+  // Get first command to execute.
   curIndex = argc - 1;
   prevIndex = curIndex;
   curIndex = nextSpecial(curIndex, argv);
   if (curIndex == -1) curIndex = 0;
   getNextCommand(curIndex + 1, prevIndex, argv);
 
+  // If there are multiple processes, enter function to execute all processes.
   if (numProcesses > 1) {
     executeNext(argc, argv);
-  } else {
+  }
+  
+  else {
     execvp(command[0], command);
   }
 
