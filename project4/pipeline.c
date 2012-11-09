@@ -1,3 +1,9 @@
+/* File:        pipeline.c
+** Author:      Liam Morris (lcm1115)
+** Description: This file contains the main function for receiving input from
+**              the command line and then starting up the pipeline.
+*/
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,27 +11,13 @@
 #include "support.h"
 #include <unistd.h>
 
-// Global Variables
-
-// Current command being processed.
+// Initialize all global variables.
 char** command;
-
-// Current index in argv when searching for commands.
 int curIndex;
-
-// Previous value of curIndex when searching for commands.
 int prevIndex;
-
-// Number of arguments in the current command.
 int numArgs = 0;
-
-// Number of processes remaining to execute.
 int numProcesses = 1;
-
-// File descriptors for I/O redirection with pipes.
 int fd[2];
-
-// File descriptors for file I/O.
 int read_fd = -1;
 int write_fd = -1;
 
