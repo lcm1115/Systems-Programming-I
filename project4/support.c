@@ -97,7 +97,7 @@ int validateInput(int argc, char** argv) {
           return 0;
         }
         // Make sure that the input is one of the last two commands.
-        else if ((i <= argc - 3 && !strcmp(argv[i+2], "|")) || input) {
+        else if (input) {
           fprintf(stderr, "%s: Illegal input redirect\n", argv[i+1]);
           return 0;
         }

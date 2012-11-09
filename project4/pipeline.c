@@ -41,6 +41,7 @@ int main(int argc, char** argv) {
   // Open files as needed for I/O redirection.
   int bound = argc - 1;
   for (int i = 0; i < bound; ++i) {
+    int erase_redirect = 0;
     // Find output redirect if it exists and open the pipe.
     if (!strcmp(argv[i], ">")) {
       write_fd = open(argv[i+1], O_CREAT | O_WRONLY);
@@ -50,7 +51,7 @@ int main(int argc, char** argv) {
       }
       dup2(write_fd, 1);
       close(write_fd);
-      if (argc == bound + 1) argc = i;
+      erase_redirect = 1;
     }
     // Find input redirect if it exists and get the file descriptor for it.
     if (!strcmp(argv[i], "<")) {
@@ -59,7 +60,19 @@ int main(int argc, char** argv) {
         perror(argv[i+1]);
         exit(-1);
       }
-      if (argc == bound + 1) argc = i;
+      erase_redirect = 1;
+    }
+
+    // If a redirect is detected, eliminate the arguments and continue
+    // processing.
+    if (erase_redirect) {
+      for (int j = i; j < bound - 1; ++j) {
+        argv[j] = argv[j+2];
+      }
+      argc -= 2;
+      bound -= 2;
+      erase_redirect = 0;
+      --i;
     }
   }
 
